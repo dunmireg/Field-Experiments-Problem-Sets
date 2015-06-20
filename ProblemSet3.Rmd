@@ -1,0 +1,112 @@
+---
+title: "Problem Set 3"
+author: "Ted Dunmire"
+date: "Saturday, June 20, 2015"
+output: html_document
+---
+
+
+1. Effects of Facebooks ads
+
+    ```{r}
+    fbData <- read.csv("C:/Users/tdunmire/Downloads/broockman_green_anon_pooled_fb_users_only.csv")
+    ```
+
+    a. Using regression without clustered standard errors compute confidence interval for the effect of the ad on candidate name recognition (Study 1 only)
+    
+    ```{r}
+    modela <- lm(name_recall ~ treat_ad, data = fbData[fbData$studyno == 1,])
+    summary(modela)
+    
+    #now get the standard error
+    stanErr <- summary(modela)$coefficients[2,2]
+    marErr <- stanErr * 1.96
+    point_estimate <- summary(modela)$coefficients[2,1]
+    lower <- point_estimate - marErr
+    upper <- point_estimate + marErr
+    ```
+    
+    So this will indicate the 95% confidence interval is between **`r lower`** and **`r upper`**
+    
+    b. What are the clusters in this study? Why might taking clustering into account increase the standard errors
+    
+    The clustering in this experiment are specific combinations of age, gender, and location. Pg 82-83 GG                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+    
+    c. Now repeat part (a) but taking clustering into account: compute a confidence interval for the effect of the ad on candidate name recognition in STudy 1 but now account for cluster
+    
+    ```{r}
+    #Cluster function provided in instructions
+    cl <- function(fm, cluster){
+    require(sandwich, quietly = TRUE)
+	  require(lmtest, quietly = TRUE)
+	  M <- length(unique(cluster))
+	  N <- length(cluster)
+	  K <- fm$rank
+	  dfc <- (M/(M-1))*((N-1)/(N-K))
+	  uj <- apply(estfun(fm),2, function(x) tapply(x, cluster, sum));
+	  vcovCL <- dfc*sandwich(fm, meat=crossprod(uj)/N)
+	  coeftest(fm, vcovCL)
+    }
+    
+    study1 <- fbData[fbData$studyno == 1,] 
+    study1$cluster <- factor(as.character(study1$cluster))
+    modelb <- lm(name_recall ~ treat_ad, data = study1)
+    resultc <- cl(modelb, study1$cluster) #clean up and make look nice
+    ```
+    
+    ***Returned Standard Error = NA???***
+    
+    d. Repeat part (c) but now for study 2 only
+    
+    ```{r}
+    study2 <- subset(fbData, fbData$studyno == 2 & fbData$name_recall != 'NA')
+    study2$cluster <- factor(as.character(study2$cluster))
+    modeld <- lm(name_recall ~ treat_ad, data = study2)
+    resultd <- cl(modeld, study2$cluster) #arguments must have same length 
+    #[-0.0723899, 0.0667832]
+    ```
+    
+    ***TBD based on answer above***
+    
+    e. Repeat part (c) but using the entire sample. What is the treatment effect and associated p-value?
+    
+    ```{r}
+    study3 <- subset(fbData, fbData$name_recall != 'NA')
+    study3$cluster <- as.factor(as.character(study3$cluster))
+    modele <- lm(name_recall ~ treat_ad, data = study3)
+    resulte <- cl(modele, study3$cluster)
+    #-0.207465, -0.1026815
+    ```
+    
+    ***TBD based on answer above***
+    
+    f. Repeat part e but include a dummy variable for whether data is from study 1 or study 2
+    
+    ```{r}
+    fbData2 <- fbData
+    fbData2$dummy <- fbData2$studyno - 1
+    
+    study4 <- subset(fbData2, fbData2$name_recall != 'NA')
+    study4$cluster <- as.factor(as.character(study4$cluster))
+    modelf <- lm(name_recall ~ treat_ad + dummy, data = study4)
+    resultf <- cl(modelf, study4$cluster) #different standard errors?
+    ```
+    
+    g. Why are the results from e and f different. Which result is biased and why (see pg 75-76)? 
+    
+    Simulating a blocked assignment 
+    The result in part e is biased because there is not an equal chance of being assigned to treatment across both groups. 
+    
+    h. Skim Facebook study and consider two claims made, why might those be different
+    
+    i. There was a 19% difference in the way people voted in areas where Facebook Ads ran vs areas where ads did not run. 
+    
+    ii. In ares where ads ran, people with the most online exposure were 17 percent more likely to vote against the proposition. 
+    
+    
+    ***Figure this out***
+    
+    
+2. Read article on encouraging recycling in Peru ***Cannot access journal***
+
+3. Questions on Multi-factor design of the recycling experiment
